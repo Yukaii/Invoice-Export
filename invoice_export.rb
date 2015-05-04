@@ -12,12 +12,9 @@ end
 
 Dir.chdir('tmp');
 today_str = "#{Time.now.strftime('%F').gsub(/\-/, '')}"
-# {today_str.gsub(/\-/,'')}
 mkcd("invoice");
-# CSV.open("export.csv", "w") do |csv|
-  # print_table_header(csv)
-# end
 mkcd("invoice#{Time.now.strftime('%F-%T')}");
+
 csv_count = 0
 csv = nil
 
