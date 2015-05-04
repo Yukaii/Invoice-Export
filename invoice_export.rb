@@ -15,10 +15,15 @@ today_str = "#{Time.now.strftime('%F').gsub(/\-/, '')}"
 mkcd("invoice");
 mkcd("invoice#{Time.now.strftime('%F-%T')}");
 
-csv_count = 0
+csv_count = 1
+row_count = 0
+bill_count = 0
 csv = nil
 
-Bill.where(state: :paid).each_with_index do |bill, invoice_index|
+csv = CSV.open("invoice-#{today_str}-#{csv_count}.csv", 'w');
+print_table_header(csv);
+
+Bill.where(state: :paid).order(amount: :desc).each_with_index do |bill, invoice_index|
   book_h = {};
   user = bill.user
   invoice_count = bill.orders.map(&:book_name).uniq.count
@@ -29,11 +34,21 @@ Bill.where(state: :paid).each_with_index do |bill, invoice_index|
     (book_h[order.book_id].nil?) ? book_h[order.book_id] = 1 : book_h[order.book_id] += 1;
   end
 
-  if invoice_index % 50 == 0
+  # if invoice_index % 50 == 0
+  #   csv_count += 1
+  #   csv = CSV.open("invoice-#{today_str}-#{csv_count}.csv", 'w');
+  #   print_table_header(csv);
+  # end
+  if row_count >= 45
     csv_count += 1
+    row_count = 0
+    bill_count = 0
     csv = CSV.open("invoice-#{today_str}-#{csv_count}.csv", 'w');
     print_table_header(csv);
   end
+
+  # bill_count = (invoice_index%50 + 1)
+  bill_count = bill_count + 1
 
   if bill.amount < (bill.price)
     # if row_count >= 42
@@ -51,7 +66,8 @@ Bill.where(state: :paid).each_with_index do |bill, invoice_index|
     invoice_note = "#{user.name}";
     transanction_note = bill.id;
     invoice_uni_num_print = "";
-    csv << [(invoice_index%50 + 1), today, 1, "已折抵書錢", 1, bill.amount, "1", "0.05", "", "", "", "", "", "", "#{account_type}", "#{account_code}", "#{serial_no}", "#{international_code}", "#{invoice_note}", "#{transanction_note}"];
+    csv << [bill_count, today, 1, "已折抵書錢", 1, bill.amount, "1", "0.05", "", "", "", "", "", "", "#{account_type}", "#{account_code}", "#{serial_no}", "#{international_code}", "#{invoice_note}", "#{transanction_note}"];
+    row_count += 1
   else
     book_h.each_with_index do |(book_id, amount), order_index|
       begin
@@ -70,7 +86,8 @@ Bill.where(state: :paid).each_with_index do |bill, invoice_index|
         invoice_note = "#{user.name}";
         transanction_note = bill.id;
         invoice_uni_num_print = "";
-        csv << [(invoice_index%50 + 1), today, order_index+1, book.name, amount, book.price, "1", "0.05", "", bill.invoice_uni_num, "#{invoice_uni_num_print}",bill.invoice_code, bill.invoice_cert, bill.invoice_love_code, "#{account_type}", "#{account_code}", "#{serial_no}", "#{international_code}", "#{invoice_note}", "#{transanction_note}#{message}"];
+        csv << [bill_count, today, order_index+1, book.name, amount, book.price, "1", "0.05", "", bill.invoice_uni_num, "#{invoice_uni_num_print}",bill.invoice_code, bill.invoice_cert, bill.invoice_love_code, "#{account_type}", "#{account_code}", "#{serial_no}", "#{international_code}", "#{invoice_note}", "#{transanction_note}#{message}"];
+        row_count += 1
 
         if book_h.count == order_index+1
           # print 35
@@ -82,7 +99,8 @@ Bill.where(state: :paid).each_with_index do |bill, invoice_index|
           # end
 
           if bill.amount == (bill.price + 35)
-            csv << [(invoice_index%50 + 1), today, invoice_count, "手續費", 1, 35, "1", "0.05", "", "", "", "", "", "", "#{account_type}", "#{account_code}", "#{serial_no}", "#{international_code}", "#{invoice_note}", "#{transanction_note}"];
+            csv << [bill_count, today, invoice_count, "手續費", 1, 35, "1", "0.05", "", "", "", "", "", "", "#{account_type}", "#{account_code}", "#{serial_no}", "#{international_code}", "#{invoice_note}", "#{transanction_note}"];
+            row_count += 1
           # elsif bill.amount < (bill.price)
           #   csv << [invoice_index+1, today, invoice_count, "折抵", 1, bill.price - bill.amount, "1", "0.05", "", "", "", "", "", "", "#{account_type}", "#{account_code}", "#{serial_no}", "#{international_code}", "#{invoice_note}", "#{transanction_note}"];
           #   row_count += 1
